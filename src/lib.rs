@@ -56,12 +56,13 @@ fn parse_probe_match(xml: String) -> Result<Option<ProbeMatch>, String> {
         println!("Pushing {}", name);
         stack.push(name);
       }
-      Ok(Event::End(ref e)) => {
+      Ok(Event::End(ref _e)) => {
         let ended_tag = stack.pop().expect("Stack can't be empty, but it was.");
         if ended_tag == "SOAP-ENV:Body" {
           break;
         }
         println!("Popped: {}", ended_tag);
+        // TODO: Verify what is popped is the tag that has ended
         // (std::str::from_utf8(e.name()).unwrap());
       }
       Ok(Event::Text(e)) => {
