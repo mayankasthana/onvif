@@ -1,10 +1,12 @@
 [package]
 name = "onvif-rs"
-version = "0.0.1"
+version = "0.0.2"
 description = "Onvif Client in rust"
 authors = ["Mayank Asthana <mayankasthana1993@gmail.com>"]
 license = "MIT"
 keywords = ["camera", "onvif", "cctv"]
+homepage = "https://github.com/mayankasthana/onvif"
+repository = "https://github.com/mayankasthana/onvif.git"
 
 
 [lib]
