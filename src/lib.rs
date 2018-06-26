@@ -9,7 +9,7 @@ use std::thread;
 use std::time::Duration;
 
 #[derive(Debug, Default)]
-struct ProbeMatch {
+pub struct ProbeMatch {
   urn: String,
   name: String,
   hardware: String,
@@ -53,7 +53,7 @@ fn parse_probe_match(xml: String) -> Result<Option<ProbeMatch>, String> {
     match reader.read_event(&mut buf2) {
       Ok(Event::Start(ref e)) => {
         let name = std::str::from_utf8(e.name()).unwrap().to_string();
-        println!("Pushing {}", name);
+        // println!("Pushing {}", name);
         stack.push(name);
       }
       Ok(Event::End(ref _e)) => {
@@ -61,7 +61,7 @@ fn parse_probe_match(xml: String) -> Result<Option<ProbeMatch>, String> {
         if ended_tag == "SOAP-ENV:Body" {
           break;
         }
-        println!("Popped: {}", ended_tag);
+        // println!("Popped: {}", ended_tag);
         // TODO: Verify what is popped is the tag that has ended
         // (std::str::from_utf8(e.name()).unwrap());
       }
@@ -76,7 +76,7 @@ fn parse_probe_match(xml: String) -> Result<Option<ProbeMatch>, String> {
           "d:Scopes" => probe_match.scopes = text.split(' ').map(|s| s.to_string()).collect(),
           "d:XAddrs" => probe_match.xaddrs = text.split(' ').map(|s| s.to_string()).collect(),
           _ => {
-            println!("Ignoring text {}", text);
+            // println!("Ignoring text {}", text);
           }
         }
       }
@@ -100,7 +100,7 @@ fn parse_probe_match(xml: String) -> Result<Option<ProbeMatch>, String> {
   Ok(Some(probe_match))
 }
 
-pub fn start_probe(probe_duration: &Duration) -> Result<(), io::Error> {
+pub fn start_probe(probe_duration: &Duration) -> Result<Vec<ProbeMatch>, io::Error> {
   let MULTICAST_ADDR: SocketAddr = "239.255.255.250:3702".parse().unwrap();
   println!("Started probe");
   let soap_tmpl = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
@@ -136,7 +136,6 @@ pub fn start_probe(probe_duration: &Duration) -> Result<(), io::Error> {
   let _read_thread_handle = thread::spawn(move || {
     loop {
       if let Ok(message) = read_message(&read_socket) {
-        println!("message: {}", message);
         devices_tx
           .send(parse_probe_match(message))
           .expect("Could not send found device over channel");
@@ -163,16 +162,17 @@ pub fn start_probe(probe_duration: &Duration) -> Result<(), io::Error> {
   });
   //broadcast_thread.join();
   //read_thread_handle.join();
+  let mut found_devices = Vec::new();
   for _ in 1..10 {
-    let dev = devices_rx.recv().unwrap();
-    println!("{:?}", dev);
+    let dev = devices_rx.recv().unwrap().unwrap().unwrap();
+    found_devices.push(dev);
   }
   thread::sleep(*probe_duration);
   // Make UDP Request
   let _ = thread_stop_tx.send(());
 
   // socket.send_to(buf, addr)
-  Ok(())
+  Ok(found_devices)
 }
 
 #[cfg(test)]
