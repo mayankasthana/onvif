@@ -2,13 +2,14 @@ extern crate quick_xml;
 
 use quick_xml::events::Event;
 use quick_xml::Reader;
+use std::collections::HashSet;
 use std::io;
 use std::net::{SocketAddr, UdpSocket};
 use std::sync::mpsc::{self, TryRecvError};
 use std::thread;
 use std::time::Duration;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Hash, Eq, PartialEq)]
 pub struct ProbeMatch {
   urn: String,
   name: String,
@@ -162,17 +163,15 @@ pub fn start_probe(probe_duration: &Duration) -> Result<Vec<ProbeMatch>, io::Err
   });
   //broadcast_thread.join();
   //read_thread_handle.join();
-  let mut found_devices = Vec::new();
+  let mut found_devices = HashSet::new();
   for _ in 1..10 {
     let dev = devices_rx.recv().unwrap().unwrap().unwrap();
-    found_devices.push(dev);
+    found_devices.insert(dev);
   }
   thread::sleep(*probe_duration);
-  // Make UDP Request
   let _ = thread_stop_tx.send(());
 
-  // socket.send_to(buf, addr)
-  Ok(found_devices)
+  Ok(found_devices.into_iter().collect())
 }
 
 #[cfg(test)]
