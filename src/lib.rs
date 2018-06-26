@@ -27,7 +27,7 @@ fn read_message(socket: &UdpSocket) -> Result<String, io::Error> {
   result.map(move |_| std::str::from_utf8(&buf).unwrap().to_string())
 }
 
-fn parse_probe_match(xml: String) -> Result<Option<ProbeMatch>, String> {
+fn parse_probe_match(xml: String) -> Result<ProbeMatch, String> {
   let mut reader = Reader::from_str(&xml);
   reader.trim_text(true);
   let mut buf = Vec::new();
@@ -98,7 +98,7 @@ fn parse_probe_match(xml: String) -> Result<Option<ProbeMatch>, String> {
       probe_match.name = (parts[parts.len() - 1]).to_string();
     }
   }
-  Ok(Some(probe_match))
+  Ok(probe_match)
 }
 
 pub fn start_probe(probe_duration: &Duration) -> Result<Vec<ProbeMatch>, io::Error> {
@@ -165,7 +165,7 @@ pub fn start_probe(probe_duration: &Duration) -> Result<Vec<ProbeMatch>, io::Err
   //read_thread_handle.join();
   let mut found_devices = HashSet::new();
   for _ in 1..10 {
-    let dev = devices_rx.recv().unwrap().unwrap().unwrap();
+    let dev = devices_rx.recv().unwrap().unwrap();
     found_devices.insert(dev);
   }
   thread::sleep(*probe_duration);
@@ -192,10 +192,25 @@ mod tests {
     fl.read_to_string(&mut probe_discovery_response)
       .expect("something went wrong reading the file");
 
-    let probe_match = parse_probe_match(probe_discovery_response)
-      .unwrap()
-      .unwrap();
-    println!("{:?}", probe_match);
-    //assert!();
+    let probe_match = parse_probe_match(probe_discovery_response).unwrap();
+    let expected = ProbeMatch {
+      urn: "urn:uuid:a91b83ca-3388-7688-99aa-101806a776fb".to_string(),
+      name: "NVT".to_string(),
+      hardware: "IPC-model".to_string(),
+      location: "china".to_string(),
+      types: vec!["dn:NetworkVideoTransmitter".to_string()],
+      xaddrs: vec!["http://192.168.1.70:8899/onvif/device_service".to_string()],
+      scopes: vec![
+        "onvif://www.onvif.org/type/video_encoder",
+        "onvif://www.onvif.org/type/audio_encoder",
+        "onvif://www.onvif.org/hardware/IPC-model",
+        "onvif://www.onvif.org/location/country/china",
+        "onvif://www.onvif.org/name/NVT",
+        "onvif://www.onvif.org/Profile/Streaming",
+      ].iter()
+        .map(|s| s.to_string())
+        .collect(),
+    };
+    assert_eq!(expected, probe_match);
   }
 }
