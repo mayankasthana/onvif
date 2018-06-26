@@ -71,11 +71,13 @@ fn parse_probe_match(xml: String) -> Result<ProbeMatch, String> {
           .expect("UTF decode error")
           .to_string();
         let tag = stack.get(stack.len() - 1).expect("Stack can't be empty");
-        match tag.as_str() {
-          "wsa:Address" => probe_match.urn = text,
-          "d:Types" => probe_match.types = text.split(' ').map(|s| s.to_string()).collect(),
-          "d:Scopes" => probe_match.scopes = text.split(' ').map(|s| s.to_string()).collect(),
-          "d:XAddrs" => probe_match.xaddrs = text.split(' ').map(|s| s.to_string()).collect(),
+        let tag_parts: Vec<&str> = tag.split(':').collect();
+        let tag = tag_parts[tag_parts.len() - 1];
+        match tag {
+          "Address" => probe_match.urn = text,
+          "Types" => probe_match.types = text.split(' ').map(|s| s.to_string()).collect(),
+          "Scopes" => probe_match.scopes = text.split(' ').map(|s| s.to_string()).collect(),
+          "XAddrs" => probe_match.xaddrs = text.split(' ').map(|s| s.to_string()).collect(),
           _ => {
             // println!("Ignoring text {}", text);
           }
