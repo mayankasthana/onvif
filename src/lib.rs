@@ -19,6 +19,29 @@ pub struct ProbeMatch {
   xaddrs: Vec<String>,
   scopes: Vec<String>,
 }
+impl ProbeMatch {
+  pub fn urn(&self) -> &String {
+    &self.urn
+  }
+  pub fn name(&self) -> &String {
+    &self.name
+  }
+  pub fn hardware(&self) -> &String {
+    &self.hardware
+  }
+  pub fn location(&self) -> &String {
+    &self.location
+  }
+  pub fn types(&self) -> &Vec<String> {
+    &self.types
+  }
+  pub fn xaddrs(&self) -> &Vec<String> {
+    &self.xaddrs
+  }
+  pub fn scopes(&self) -> &Vec<String> {
+    &self.scopes
+  }
+}
 
 fn read_message(socket: &UdpSocket) -> Result<String, io::Error> {
   let mut buf: [u8; 65_535] = [0; 65_535];
@@ -214,5 +237,6 @@ mod tests {
         .collect(),
     };
     assert_eq!(expected, probe_match);
+    assert_eq!(expected.urn(), probe_match.urn());
   }
 }
