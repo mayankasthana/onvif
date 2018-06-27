@@ -97,9 +97,9 @@ fn parse_probe_match(xml: &str) -> Result<ProbeMatch, String> {
         let tag = tag_parts[tag_parts.len() - 1];
         match tag {
           "Address" => probe_match.urn = text,
-          "Types" => probe_match.types = text.split(' ').map(|s| s.to_string()).collect(),
-          "Scopes" => probe_match.scopes = text.split(' ').map(|s| s.to_string()).collect(),
-          "XAddrs" => probe_match.xaddrs = text.split(' ').map(|s| s.to_string()).collect(),
+          "Types" => probe_match.types = text.split(' ').map(String::from).collect(),
+          "Scopes" => probe_match.scopes = text.split(' ').map(String::from).collect(),
+          "XAddrs" => probe_match.xaddrs = text.split(' ').map(String::from).collect(),
           _ => {
             // println!("Ignoring text {}", text);
           }
@@ -113,33 +113,43 @@ fn parse_probe_match(xml: &str) -> Result<ProbeMatch, String> {
   for scope in &probe_match.scopes {
     if scope.starts_with("onvif://www.onvif.org/hardware/") {
       let parts: Vec<&str> = scope.split('/').collect();
-      probe_match.hardware = (parts[parts.len() - 1]).to_string();
+      probe_match.hardware = (parts[parts.len() - 1]).into();
     } else if scope.starts_with("onvif://www.onvif.org/location/") {
       let parts: Vec<&str> = scope.split('/').collect();
-      probe_match.location = (parts[parts.len() - 1]).to_string();
+      probe_match.location = (parts[parts.len() - 1]).into();
     } else if scope.starts_with("onvif://www.onvif.org/name/") {
       let parts: Vec<&str> = scope.split('/').collect();
-      probe_match.name = (parts[parts.len() - 1]).to_string();
+      probe_match.name = (parts[parts.len() - 1]).into();
     }
   }
   Ok(probe_match)
 }
 
 pub fn start_probe(probe_duration: &Duration) -> Result<Vec<ProbeMatch>, io::Error> {
-  let MULTICAST_ADDR: SocketAddr = "239.255.255.250:3702".parse().unwrap();
+  let multicast_addr: SocketAddr = "239.255.255.250:3702".parse().unwrap();
   println!("Started probe");
-  let soap_tmpl = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-  <s:Envelope xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:a=\"http://schemas.xmlsoap.org/ws/2004/08/addressing\">
+  let soap_tmpl = r#"
+  <?xml version="1.0" encoding="UTF-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" 
+  xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
   <s:Header>
-  <a:Action s:mustUnderstand=\"1\">
+    <a:Action s:mustUnderstand="1">
   http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</a:Action>
-  <a:MessageID>uuid:__uuid__</a:MessageID>
-  <a:ReplyTo><a:Address>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</a:Address>
-  </a:ReplyTo><a:To s:mustUnderstand=\"1\">urn:schemas-xmlsoap-org:ws:2005:04:discovery</a:To>
-  </s:Header><s:Body><Probe xmlns=\"http://schemas.xmlsoap.org/ws/2005/04/discovery\">
-  <d:Types xmlns:d=\"http://schemas.xmlsoap.org/ws/2005/04/discovery\" xmlns:dp0=\"http://www.onvif.org/ver10/network/wsdl\">
-  dp0:__type__</d:Types></Probe></s:Body>
-  </s:Envelope>";
+    <a:MessageID>uuid:__uuid__</a:MessageID>
+    <a:ReplyTo>
+      <a:Address>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</a:Address>
+    </a:ReplyTo>
+    <a:To s:mustUnderstand="1">urn:schemas-xmlsoap-org:ws:2005:04:discovery</a:To>
+  </s:Header>
+  <s:Body>
+    <Probe xmlns="http://schemas.xmlsoap.org/ws/2005/04/discovery">
+      <d:Types xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery" 
+        xmlns:dp0="http://www.onvif.org/ver10/network/wsdl">
+  dp0:__type__</d:Types>
+    </Probe>
+  </s:Body>
+</s:Envelope>
+  "#;
   let types = vec!["NetworkVideoTransmitter", "Device", "NetworkVideoDisplay"];
   let soap_reqs: Vec<String> = types
     .iter()
@@ -179,7 +189,7 @@ pub fn start_probe(probe_duration: &Duration) -> Result<Vec<ProbeMatch>, io::Err
     for _ in 1..5 {
       for soap_req in &soap_reqs {
         socket
-          .send_to(soap_req.as_bytes(), &MULTICAST_ADDR)
+          .send_to(soap_req.as_bytes(), &multicast_addr)
           .expect("Could not send req");
         thread::sleep(Duration::from_millis(100));
       }
@@ -211,19 +221,20 @@ mod tests {
     use std::fs;
     use std::io::prelude::*;
 
-    let mut fl = fs::File::open("src/resources/probe-discovery-response.xml").unwrap();
+    let mut fl = fs::File::open("src/resources/probe-discovery-response.xml")
+      .expect("Could not find probe discovery response xml file");
     let mut probe_discovery_response = String::new();
     fl.read_to_string(&mut probe_discovery_response)
       .expect("something went wrong reading the file");
 
     let probe_match = parse_probe_match(&probe_discovery_response).unwrap();
     let expected = ProbeMatch {
-      urn: "urn:uuid:a91b83ca-3388-7688-99aa-101806a776fb".to_string(),
-      name: "NVT".to_string(),
-      hardware: "IPC-model".to_string(),
-      location: "china".to_string(),
-      types: vec!["dn:NetworkVideoTransmitter".to_string()],
-      xaddrs: vec!["http://192.168.1.70:8899/onvif/device_service".to_string()],
+      urn: "urn:uuid:a91b83ca-3388-7688-99aa-101806a776fb".into(),
+      name: "NVT".into(),
+      hardware: "IPC-model".into(),
+      location: "china".into(),
+      types: vec!["dn:NetworkVideoTransmitter".into()],
+      xaddrs: vec!["http://192.168.1.70:8899/onvif/device_service".into()],
       scopes: vec![
         "onvif://www.onvif.org/type/video_encoder",
         "onvif://www.onvif.org/type/audio_encoder",
@@ -231,8 +242,8 @@ mod tests {
         "onvif://www.onvif.org/location/country/china",
         "onvif://www.onvif.org/name/NVT",
         "onvif://www.onvif.org/Profile/Streaming",
-      ].iter()
-        .map(|s| s.to_string())
+      ].into_iter()
+        .map(String::from)
         .collect(),
     };
     assert_eq!(expected, probe_match);
