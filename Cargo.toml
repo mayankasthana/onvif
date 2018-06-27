@@ -14,5 +14,3 @@ name = "onvif"
 
 [dependencies]
 quick-xml = "0.12.0"
-rand = "0.5.2"
-
