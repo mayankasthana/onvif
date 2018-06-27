@@ -15,3 +15,7 @@ name = "onvif"
 [dependencies]
 quick-xml = "0.12.0"
 derive_builder = "0.5.1"
+
+
+[dev-dependencies]
+pretty_assertions = "0.5.1"
