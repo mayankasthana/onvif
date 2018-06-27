@@ -4,7 +4,7 @@ WARNING! This is in not even alpha stage.
 
 ## Running the examples:
 
-`cargo r --example basic`
+`cargo r --example probe`
 
 ## Running the tests
 
