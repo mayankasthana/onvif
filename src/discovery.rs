@@ -49,7 +49,7 @@ fn read_message(socket: &UdpSocket) -> Result<String, io::Error> {
   result.map(move |_| str::from_utf8(&buf).unwrap().to_string())
 }
 
-fn parse_probe_match(xml: String) -> Result<ProbeMatch, String> {
+fn parse_probe_match(xml: &str) -> Result<ProbeMatch, String> {
   let mut reader = Reader::from_str(&xml);
   reader.trim_text(true);
   let mut buf = Vec::new();
@@ -162,7 +162,7 @@ pub fn start_probe(probe_duration: &Duration) -> Result<Vec<ProbeMatch>, io::Err
     loop {
       if let Ok(message) = read_message(&read_socket) {
         devices_tx
-          .send(parse_probe_match(message))
+          .send(parse_probe_match(&message))
           .expect("Could not send found device over channel");
       }
       match thread_stop_rx.try_recv() {
@@ -216,7 +216,7 @@ mod tests {
     fl.read_to_string(&mut probe_discovery_response)
       .expect("something went wrong reading the file");
 
-    let probe_match = parse_probe_match(probe_discovery_response).unwrap();
+    let probe_match = parse_probe_match(&probe_discovery_response).unwrap();
     let expected = ProbeMatch {
       urn: "urn:uuid:a91b83ca-3388-7688-99aa-101806a776fb".to_string(),
       name: "NVT".to_string(),
