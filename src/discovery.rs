@@ -42,6 +42,11 @@ impl ProbeMatch {
   }
 }
 
+fn remove_namespace_prefix(st: &str) -> &str {
+  let parts: Vec<&str> = st.split(':').collect();
+  parts[parts.len() - 1]
+}
+
 fn read_message(socket: &UdpSocket) -> Result<String, io::Error> {
   let mut buf: [u8; 65_535] = [0; 65_535];
   // println!("Reading data");
@@ -93,17 +98,22 @@ fn parse_probe_match(xml: &str) -> Result<ProbeMatch, String> {
           .expect("UTF decode error")
           .to_string();
         let tag = stack.get(stack.len() - 1).expect("Stack can't be empty");
-        let tag_parts: Vec<&str> = tag.split(':').collect();
-        let tag = tag_parts[tag_parts.len() - 1];
+        let tag = remove_namespace_prefix(tag);
         match tag {
           "Address" => probe_match.urn = text,
-          "Types" => probe_match.types = text.split(' ').map(String::from).collect(),
+          "Types" => {
+            probe_match.types = text
+              .split(' ')
+              .map(remove_namespace_prefix)
+              .map(String::from)
+              .collect()
+          }
           "Scopes" => probe_match.scopes = text.split(' ').map(String::from).collect(),
           "XAddrs" => probe_match.xaddrs = text.split(' ').map(String::from).collect(),
           _ => {
             // println!("Ignoring text {}", text);
           }
-        }
+        };
       }
       Ok(Event::Eof) => break,
       Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
@@ -233,7 +243,7 @@ mod tests {
       name: "NVT".into(),
       hardware: "IPC-model".into(),
       location: "china".into(),
-      types: vec!["dn:NetworkVideoTransmitter".into()],
+      types: vec!["NetworkVideoTransmitter".into()],
       xaddrs: vec!["http://192.168.1.70:8899/onvif/device_service".into()],
       scopes: vec![
         "onvif://www.onvif.org/type/video_encoder",
